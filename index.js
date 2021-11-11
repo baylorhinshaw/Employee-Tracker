@@ -1,4 +1,5 @@
 const mysql = require("mysql2");
+const cTable = require("console.table");
 
 const db = mysql.createConnection(
     {
@@ -40,4 +41,4 @@ db.query(('INSERT INTO employee ?,?,?,?', queryParams), (err, results) => {
 // create an employee
 // change an employee role
 
-module.exports = DB;
+module.exports;

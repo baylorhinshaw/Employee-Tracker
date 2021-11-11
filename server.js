@@ -1,7 +1,6 @@
-const { response } = require("express");
 const inquirer = require("inquirer");
+const cTable = require("console.table");
 const db = require("./index");
-require("console.table");
 
 
 const questions = [{
@@ -16,7 +15,7 @@ const startQuestion = () => {
     .then((response) => {
         const { startQuestion } = response
         if (startQuestion === 'View all departments') {
-            viewDepartments();
+            db.viewAllDepartments();
         } else if (startQuestion === 'View all roles') {
 
         } else if (startQuestion === 'View all employees') {
@@ -37,12 +36,13 @@ const startQuestion = () => {
 
 startQuestion();
 
-function viewDepartments() {
-    db.viewAllDepartments()
-    .then(results => {
-        console.table(results)
-    })
-};
+// function viewDepartments() {
+//     db.viewAllDepartments()
+//     .then(results => {
+//         console.table(results)
+//     })
+// };
+
 // ask inquirer questions
 //db.addEmployees(inquirerAnswers)
 
