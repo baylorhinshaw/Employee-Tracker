@@ -1,13 +1,14 @@
 const inquirer = require("inquirer");
 const mysql = require("mysql2");
 const cTable = require("console.table");
-const { response } = require("express");
+const fs = require('fs');
 
+// makes connection to the database: teams_db
 const db = mysql.createConnection(
     {
       host: 'localhost',
       user: 'root',
-      password: 'baylorhinshaw',
+      password: 'root',
       database: 'teams_db'
     },
     console.log(`Connected to the teams_db database.`)
@@ -39,45 +40,126 @@ const viewAllEmployees = () => {
     startPrompt();
 };
 
-
+// question for department 
 const departmentQuestion = [{
     type: 'input',
     message: 'What department would you like to add?',
     name: 'departmentAnswer'
 }];
 
+// will ask question and then take the answer and add to departments then show you the new table
 const addDepartmentQuestion = () => {
     inquirer.prompt(departmentQuestion)
     .then((response) => {
         db.query(`INSERT INTO department (department_name) VALUES ('${response.departmentAnswer}')`, (err, results) => {
-            console.log(`You have added ${response.departmentAnswer} into Departments`);
+            console.log(`You have added ${response.departmentAnswer} into Departments!`);
             viewAllDepartments();
         });
         startPrompt();
     });
 };
-// maybe can ask one question then take in the 3 inputs
-const rolesQuestions = [{
-    type: 'input',
-    message: 'What is the title of this role?',
-    name: 'rolesAnswers'
-}, {
-    type: 'input',
-    message: 'What is the salary of the role?',
-    name: 'rolesAnswers'
-}, {
-    type: 'input',
-    message: 'What is the department id of the role?',
-    name: 'rolesAnswers'
-}];
 
-// need to write for loop to iterate through each rolesQuestion to prompt each one
-// then grab each response
+
+// adding a new role
+// will probably need to use .map to make a new array
 const addRolesQuestion = () => {
-    inquirer.prompt(rolesQuestions)
-    .then((response) => {
-        console.log(response);
-    })
+    db.query('SELECT * FROM department', (err, results) => {
+        let allDepartments = results.map(department => {
+            return {value: department.id, name: department.department_name}
+        });
+        inquirer.prompt([{
+            type: 'input',
+            message: 'What is the name of this new role?',
+            name: 'roleName'
+        }, {
+            type: 'input',
+            message: 'What is the salary of the new role?',
+            name: 'roleSalary'
+        }, {
+            type: 'list',
+            message: 'Which department does this role belong to?',
+            name: 'roleID',
+            choices: allDepartments
+        }])
+        .then(({roleName, roleSalary, roleID}) => {
+            db.query('INSERT INTO roles (title, salary, department_id) VALUES(?, ?, ?);', [roleName, roleSalary, roleID], (err, results) => {
+            viewAllRoles();
+            });
+        });
+    }); 
+};
+
+// add employee prob will need to map also
+const addEmployeeQuestion = () => {
+    db.query('SELECT * FROM roles', (err, results) => {
+        let allRoles = results.map(roles => {
+            return {value: roles.id, name: roles.title}
+        });
+    db.query('SELECT * FROM employee', (err, results) => {
+        let allEmployees = results.map(employee => {
+            return {value: employee.id, name: employee.first_name}
+        });
+        inquirer.prompt([{
+            type: 'input',
+            message: 'What is the employees name?',
+            name: 'firstName'
+        }, {
+            type: 'input',
+            message: 'What is the employees last name?',
+            name: 'lastName'
+        }, {
+            type: 'list',
+            message: 'What role is the employee under?',
+            name: 'employeesRole',
+            choices: allRoles
+        }, {
+            type: 'list',
+            message: 'What manager is the employee under?',
+            name: 'employeesManager',
+            choices: allEmployees
+        }])
+        .then(({firstName, lastName, employeesRole, employeesManager}) => {
+            db.query('INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES(?, ?, ?, ?);', [firstName, lastName, employeesRole, employeesManager], (err, results) => {
+            viewAllEmployees();
+            });
+        });
+    });
+});
+};
+
+const updateEmployeeRole = () => {
+    db.query(`SELECT * FROM roles`, (err, results) => {
+        let allRoles = results.map(roles => {
+          return  {value: roles.id, name: roles.title}
+        });
+    db.query('SELECT * FROM employee', (err, results) => {
+        let allEmployees = results.map(employee => {
+            return {value: employee.id, name: employee.first_name}
+        });
+      inquirer.prompt([{
+        type: 'list',
+        message: "What is the first name of the employee you would like to update?",
+        name: 'updateEmployee',
+        choices: allEmployees
+      },
+      {
+        type: 'list',
+        message: "What is the employees new role?",
+        name: 'newRole',
+        choices: allRoles
+      }])
+      .then(({updateEmployee, newRole}) => {
+          db.query(`UPDATE employee SET role_id = ? WHERE first_name = ?`, [updateEmployee, newRole], (err, results) => {
+            viewAllEmployees();
+        });
+        });
+    });
+});
+};
+
+const doneWithPrompts = () => {
+    console.log('You are all done!')
+    process.exit();
 }
 
 const choices = {
@@ -86,9 +168,9 @@ const choices = {
     'View all employees': viewAllEmployees, 
     'Add a department': addDepartmentQuestion, 
     'Add a role': addRolesQuestion, 
-    'Add an employee': null, 
-    'Update an employee role': null, 
-    'Done':null,
+    'Add an employee': addEmployeeQuestion, 
+    'Update an employee role': updateEmployeeRole, 
+    'Done': doneWithPrompts,
 };
 
 // Object.key turns it into an array bc .prompt choices to be an array
@@ -109,32 +191,3 @@ const startPrompt = () => {
 };
 
 startPrompt();
-
-
-// function addEmployee(queryParams){
-// db.query(('INSERT INTO employee ?,?,?,?', queryParams), (err, results) => {
-//     console.table(results);
-// });
-// }
-
-// create a role
-// create an employee
-// change an employee role
-
-// function viewDepartments() {
-//     db.viewAllDepartments()
-//     .then(results => {
-//         console.table(results)
-//     })
-// };
-
-// ask inquirer questions
-//db.addEmployees(inquirerAnswers)
-
-// object destructuring
-// name { key1: "value", key2: "different"}
-// before destructuring
-// console.log(name.key1)
-// destructured:
-// const { key1, key2 } = name
-// console.log(key1)
